@@ -1,0 +1,35 @@
+Seeding master data...
+PrismaClientKnownRequestError: 
+Invalid `prisma.ticketStatus.upsert()` invocation in
+C:\Users\Organizer\Documents\1a\prisma\seed.ts:16:35
+
+  13     { name: 'Closed', color: 'gray', isClosed: true, order: 5 },
+  14 ];
+  15 for (const s of statuses) {
+→ 16     await prisma.ticketStatus.upsert(
+The table `public.TicketStatus` does not exist in the current database.
+    at Vr.handleRequestError (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client\src\runtime\RequestHandler.ts:228:13)
+    at Vr.handleAndLogRequestError (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at Vr.request (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async a (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:805:24)
+    at async main (C:\Users\Organizer\Documents\1a\prisma\seed.ts:16:9) {
+  code: 'P2021',
+  meta: {
+    modelName: 'TicketStatus',
+    driverAdapterError: DriverAdapterError: TableDoesNotExist
+        at PrismaPgAdapter.onError (file:///C:/Users/Organizer/Documents/1a/node_modules/@prisma/adapter-pg/dist/index.mjs:651:11)
+        at PrismaPgAdapter.performIO (file:///C:/Users/Organizer/Documents/1a/node_modules/@prisma/adapter-pg/dist/index.mjs:646:12)
+        at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at async PrismaPgAdapter.queryRaw (file:///C:/Users/Organizer/Documents/1a/node_modules/@prisma/adapter-pg/dist/index.mjs:566:30)
+        at async o (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client-engine-runtime\src\tracing.ts:66:26)
+        at async e.interpretNode (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client-engine-runtime\src\interpreter\query-interpreter.ts:182:26)
+        at async e.interpretNode (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client-engine-runtime\src\interpreter\query-interpreter.ts:209:41)
+        at async e.interpretNode (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client-engine-runtime\src\interpreter\query-interpreter.ts:268:41)
+        at async e.run (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client-engine-runtime\src\interpreter\query-interpreter.ts:93:23)
+        at async e.execute (C:\Users\Organizer\Documents\1a\node_modules\@prisma\client\src\runtime\core\engines\client\LocalExecutor.ts:81:12) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.3.0'
+}

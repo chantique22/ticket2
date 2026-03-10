@@ -1,0 +1,277 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ----------------------------------------------------
+// PART 1: MASTER DATA MODELS
+// ----------------------------------------------------
+
+model Department {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  users     User[]
+}
+
+enum Role {
+  USER
+  TECHNICIAN
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  username      String?   @unique
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?
+  role          Role      @default(USER)
+  
+  departmentId  Int?
+  department    Department? @relation(fields: [departmentId], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  assets        Asset[]
+  tickets       Ticket[]  @relation("ReportedTickets")
+  assigned      Ticket[]  @relation("AssignedTickets")
+  knowledgeBasesCreated KnowledgeBase[] @relation("KnowledgeBaseCreatedBy")
+  notifications Notification[]
+}
+
+model Location {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  assets    Asset[]
+}
+
+model Asset {
+  id         Int       @id @default(autoincrement())
+  assetCode  String    @unique
+  pcName     String
+  brand      String?
+  model      String?
+  os         String?
+  ram        String?
+  storage    String?
+  
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  
+  locationId Int?
+  location   Location? @relation(fields: [locationId], references: [id])
+
+  createdAt  DateTime  @default(now())
+  tickets    Ticket[]
+}
+
+model Category {
+  id             Int             @id @default(autoincrement())
+  name           String          @unique
+  subCategories  SubCategory[]
+  tickets        Ticket[]
+  knowledgeBases KnowledgeBase[]
+}
+
+model SubCategory {
+  id         Int      @id @default(autoincrement())
+  name       String
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  tickets    Ticket[]
+
+  @@unique([name, categoryId])
+}
+
+model TicketStatus {
+  id       Int      @id @default(autoincrement())
+  name     String   @unique
+  color    String   @default("gray")
+  isClosed Boolean  @default(false)
+  order    Int      @default(0)
+  tickets  Ticket[]
+}
+
+model Priority {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  slaHours   Int      @default(24)
+  tickets    Ticket[]
+}
+
+model Channel {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  tickets Ticket[]
+}
+
+model RootCause {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  tickets  Ticket[]
+  problems Problem[]
+}
+
+model KnowledgeBase {
+  id         Int      @id @default(autoincrement())
+  title      String
+  issue      String   @db.Text
+  solution   String   @db.Text
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Could add createdBy, leaving it out for simplicity if not strictly necessary, 
+  // but adding it based on user request "createdBy"
+  createdById String?
+  createdBy   User?   @relation("KnowledgeBaseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+model OperatingHours {
+  id        Int    @id @default(autoincrement())
+  dayOfWeek Int    @unique // 0=Sun, 1=Mon, etc.
+  startTime String // e.g., "08:00"
+  endTime   String // e.g., "17:00"
+}
+
+// ----------------------------------------------------
+// PART 2: TICKET MODEL
+// ----------------------------------------------------
+
+model Ticket {
+  id          Int      @id @default(autoincrement())
+  subject     String
+  description String   @db.Text
+  
+  // Relations
+  userId        String
+  user          User          @relation("ReportedTickets", fields: [userId], references: [id])
+  assetId       Int?
+  asset         Asset?        @relation(fields: [assetId], references: [id])
+  categoryId    Int
+  category      Category      @relation(fields: [categoryId], references: [id])
+  subCategoryId Int
+  subCategory   SubCategory   @relation(fields: [subCategoryId], references: [id])
+  technicianId  String?
+  technician    User?         @relation("AssignedTickets", fields: [technicianId], references: [id])
+  statusId      Int
+  status        TicketStatus  @relation(fields: [statusId], references: [id])
+  priorityId    Int
+  priority      Priority      @relation(fields: [priorityId], references: [id])
+  channelId     Int?
+  channel       Channel?      @relation(fields: [channelId], references: [id])
+
+  // Resolution
+  analysis    String? @db.Text
+  solution    String? @db.Text
+  prevention  String? @db.Text
+  rootCauseId Int?
+  rootCause   RootCause? @relation(fields: [rootCauseId], references: [id])
+
+  // Tracking
+  startTime   DateTime?
+  finishTime  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // SLA
+  slaDeadline DateTime?
+  slaBreached Boolean   @default(false)
+
+  notifications   Notification[]
+  problemTickets  ProblemTicket[]
+
+  @@index([userId])
+  @@index([technicianId])
+  @@index([assetId])
+  @@index([categoryId])
+  @@index([subCategoryId])
+  @@index([statusId])
+  @@index([priorityId])
+  @@index([channelId])
+  @@index([rootCauseId])
+}
+
+// ----------------------------------------------------
+// PART 3: INCIDENT & PROBLEM TRACKING
+// ----------------------------------------------------
+
+model Problem {
+  id          Int       @id @default(autoincrement())
+  title       String
+  rootCauseId Int?
+  rootCause   RootCause? @relation(fields: [rootCauseId], references: [id])
+  createdAt   DateTime  @default(now())
+  
+  problemTickets ProblemTicket[]
+}
+
+model ProblemTicket {
+  id        Int     @id @default(autoincrement())
+  problemId Int
+  problem   Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  ticketId  Int
+  ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  @@unique([problemId, ticketId])
+}
+
+// ----------------------------------------------------
+// EXISTING AUTH & NOTIFICATION MODELS
+// ----------------------------------------------------
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  ticket   Ticket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId Int?
+}
